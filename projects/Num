@@ -1,0 +1,34 @@
+const ADDRESSES = require('../helper/coreAssets.json')
+const { sumTokens2, nullAddress, } = require("../helper/unwrapLPs");
+const sdk = require("@defillama/sdk");
+
+module.exports = {
+  methodology:
+    "TVL counts the AAVE tokens that are deposited within the Yield Instruments section of QiDao, the Vault token deposits of CRV, LINK, AAVE and WETH, as well as USDC deposited to mint MAI.",
+};
+
+const config = {
+  bsc: {
+    vaults: [
+      "0xE9EF1D9De287F4fD8c55d466d056DA473D18b7Eb",
+      "0x15bBD9f6885f9b3a7369AB3184c0e52118baA17C",
+    ]
+  },
+}
+
+Object.keys(config).forEach(chain => {
+  const { vaults, toa = [] } = config[chain]
+  module.exports[chain] = {
+    tvl: async (_, _b, { [chain]: block }) => {
+      const tokens = await sdk.api2.abi.multiCall({
+        abi: 'address:collateral',
+        calls: vaults,
+        chain, block,
+      })
+      const tokensAndOwners = tokens.map((t, i) => ([t, vaults[i]]))
+      tokensAndOwners.push(...toa)
+
+      return sumTokens2({ tokensAndOwners, chain, block, })
+    }
+  }
+})
